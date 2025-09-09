@@ -24,6 +24,7 @@ The final step was to analyze the distribution's tails using Extreme Value Theor
 To check if  GPD model was actually a good fit for the data, by using Kolmogorov-Smirnov (KS) goodness-of-fit test:
 - **KS Statistic: 1.0000**
 -	**KS p-value: 0.0000**
+
 The resulting p-value was effectively zero. This forces the rejection of the null hypothesis, meaning the GPD model is a poor fit for the data's extreme tails. This is a critical finding, as it implies any risk measures (like VaR or ES) derived from this model would be unreliable.
 ### Conclusion
 While I successfully modeled the volatility of SBI and INFY returns with GARCH, the EVT application for tail risk was unsuccessful with this specific approach. The key takeaway is the failure of the GPD fit.
