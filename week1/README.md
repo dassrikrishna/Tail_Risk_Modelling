@@ -1,202 +1,123 @@
-# Time Series Analysis and Volatility Modeling of SBIN.NS and INFY.NS
+# Time Series Analysis and Volatility Modeling of Indian Stocks (SBIN.NS & INFY.NS)
 
-## Overview
-This project constructs and validates marginal distribution models for the financial returns of two major Indian stocks: State Bank of India (SBIN.NS) and Infosys (INFY.NS). The primary goal is to create a robust model that accurately captures the stylized facts of financial returns, such as volatility clustering, leverage effects, and heavy-tailed distributions.
+This repository contains a detailed time series analysis and volatility modeling project focusing on two prominent Indian stocks: **SBIN.NS (State Bank of India)** and **INFY.NS (Infosys)**. The analysis employs a range of sophisticated time series models, including ARIMA, GARCH, GJR-GARCH, and Extreme Value Theory (EVT) with a focus on Generalized Pareto Distribution (GPD), to forecast stock prices and their associated volatilities.
 
-The modeling framework integrates three key components:
-1.  **Autoregressive Moving Average (ARMA) model**: Used for modeling the conditional mean.
-2.  **Glosten-Jagannathan-Runkle GARCH (GJR-GARCH) model with Student’s t-distribution**: Applied for modeling conditional volatility.
-3.  **Extreme Value Theory (EVT)**: Utilized for modeling the tail distributions.
+## Table of Contents
 
-The final composite model is validated using the Probability Integral Transform (PIT) and Kolmogorov-Smirnov (KS) tests to ensure an adequate description of the entire return distribution.
+1.  [Introduction](#1-introduction)
+2.  [Data Acquisition and Initial Exploration](#2-data-acquisition-and-initial-exploration)
+3.  [Stationarity Tests on Close Prices](#3-stationarity-tests-on-close-prices)
+4.  [ARIMA Model Forecasting](#4-arima-model-forecasting)
+5.  [Log Returns Analysis and Volatility Modeling](#5-log-returns-analysis-and-volatility-modeling)
+6.  [GARCH Model for Log Returns](#6-garch-model-for-log-returns)
+7.  [GJR-GARCH Model with Students-T Distribution](#7-gjr-garch-model-with-students-t-distribution)
+8.  [Extreme Value Theory (EVT) - Peaks Over Threshold (POT) and GPD Fit](#8-extreme-value-theory-evt---peaks-over-threshold-pot-and-gpd-fit)
+9.  [Libraries Used](#9-libraries-used)
+10. [Conclusion](#10-conclusion)
 
-## Contents
-1.  [Installation](#installation)
-2.  [Data Acquisition and Preparation](#data-acquisition-and-preparation)
-3.  [ARMA Model Analysis](#arma-model-analysis)
-    *   [SBIN.NS](#sbinns-arma)
-    *   [INFY.NS](#infyns-arma)
-4.  [GJR-GARCH-StudentT Model Analysis](#gjr-garch-studentt-model-analysis)
-    *   [SBIN.NS](#sbinns-gjr-garch)
-    *   [INFY.NS](#infyns-gjr-garch)
-5.  [Rolling Forecasting](#rolling-forecasting)
-    *   [SBIN.NS](#sbinns-rolling-forecast)
-    *   [INFY.NS](#infyns-rolling-forecast)
-6.  [Extreme Value Theory (EVT) Analysis](#extreme-value-theory-evt-analysis)
-    *   [SBIN.NS EVT](#sbinns-evt)
-    *   [INFY.NS EVT](#infyns-evt)
-7.  [Author](#author)
-8.  [Date](#date)
+## 1. Introduction
 
-## Installation
-The following Python libraries are necessary to run the analysis:
+This project aims to provide a comprehensive analysis of the closing prices and log returns for SBIN.NS and INFY.NS. The core objective is to **model and forecast both stock prices and their associated volatilities** using various time series techniques. The models employed include:
+*   **ARIMA** (Autoregressive Integrated Moving Average) for price forecasting.
+*   **GARCH** (Generalized Autoregressive Conditional Heteroskedasticity) and **GJR-GARCH** for volatility modeling, accounting for volatility clustering and asymmetric responses to shocks.
+*   **Extreme Value Theory (EVT)**, specifically the Peaks Over Threshold (POT) method with a Generalized Pareto Distribution (GPD) fit, to model extreme market events.
+
+The analysis is implemented using a suite of Python libraries for data handling, statistical modeling, and visualization.
+
+## 2. Data Acquisition and Initial Exploration
+
+*   **Data Slices**: Closing price data for SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   Historical closing prices were **downloaded from Yahoo Finance (`yfinance`)** for the maximum available period.
+    *   Initial closing price data samples were displayed.
+    *   Visualizations of historical closing prices were generated to observe **long-term trends and fluctuations**.
+    *   **Classical decomposition** (additive model, 252-period seasonality) was applied to the closing prices.
+*   **Conclusion**: Initial exploration provided a foundational understanding of the stock price movements.
+
+## 3. Stationarity Tests on Close Prices
+
+*   **Data Slices**: Closing price series for SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   **Augmented Dickey-Fuller (ADF) tests** were performed to check for stationarity.
+    *   **Kwiatkowski-Phillips-Schmidt-Shin (KPSS) tests** were also performed for robust stationarity assessment.
+*   **Conclusion**: Both the ADF and KPSS tests consistently indicated that the close price series for both SBIN.NS and INFY.NS are **not stationary**.
+
+## 4. ARIMA Model Forecasting
+
+*   **Data Slices**: First difference of the close prices for SBIN.NS and INFY.NS, split into training (95%) and testing (5%) sets.
+*   **Decisions**:
+    *   ACF and PACF plots were generated for the first differenced series to aid in **ARIMA order identification**.
+    *   The `ndiffs` function, utilizing the ADF test, indicated that **one difference was required** for both series to achieve stationarity.
+    *   The `auto_arima` function was used to automatically select the best ARIMA(p,d,q) model order by **minimizing the Akaike Information Criterion (AIC)**.
+    *   Model performance on the test set was evaluated using **Root Mean Squared Error (RMSE)** and **Mean Absolute Percentage Error (MAPE)**.
+*   **Conclusion**:
+    *   **SBIN.NS**: Best model was **ARIMA(0,1,1)(0,0,0) with an intercept** (AIC: 40372.382). Performance metrics: **RMSE: 53.8107**, **MAPE: 5.70%**.
+    *   **INFY.NS**: Best model was **ARIMA(1,1,1)(0,0,0) with an intercept** (AIC: 51137.707). Performance metrics: **RMSE: 193.9741**, **MAPE: 9.90%**.
+
+## 5. Log Returns Analysis and Volatility Modeling
+
+*   **Data Slices**: Daily log returns for both SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   Log returns were computed as a percentage.
+    *   Stationarity of log returns was tested using the **ADF test**.
+    *   The presence of **ARCH effects** was checked using the ARCH test to identify volatility clustering.
+    *   Log return data was split into training (95%) and testing (5%) sets.
+*   **Conclusion**:
+    *   Log return series for both stocks were found to be **stationary** (SBI-Returns p-value: 0.0, INFY-Returns p-value: 3.11e-26).
+    *   Significant **ARCH effects were present** in both log returns (ARCH Test p-value: 0.0000 for both), confirming volatility clustering.
+
+## 6. GARCH Model for Log Returns
+
+*   **Data Slices**: Training and testing sets of log returns for SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   A custom function (`best_garch_model`) was used to find the **best GARCH(p,q) model with a Student’s t-distribution** by minimizing AIC.
+    *   Model performance was evaluated using **RMSE** on rolling forecasts.
+*   **Conclusion**:
+    *   **SBIN.NS**: Best GARCH model was **GARCH(1,2)** with an AIC of 30773.3989. **RMSE for forecast: 0.4651**.
+    *   **INFY.NS**: Best GARCH model was **GARCH(1,5)** with an AIC of 29477.6792. **RMSE for forecast: 0.3951**.
+
+## 7. GJR-GARCH Model with Students-T Distribution
+
+*   **Data Slices**: Log returns of SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   A **GJR-GARCH(1,1,1) model with a Students-T distribution** was applied to capture asymmetric volatility responses to positive and negative shocks.
+    *   AIC and BIC were considered for model selection.
+    *   Ljung-Box tests on residuals and squared residuals, and the ARCH LM test, were used to diagnose model fit and ensure no remaining ARCH effects.
+*   **Conclusion**:
+    *   **SBIN.NS**: AIC: 30772.4217, BIC: 30813.6153. **RMSE for forecast: 0.4746**. The ARCH LM p-value was 0.8120734381292837, indicating **no remaining ARCH effects** in the standardized residuals.
+    *   **INFY.NS**: AIC: 29508.6811, BIC: 29549.8746. **RMSE for forecast: 0.4364**. The ARCH LM p-value was 0.8951512570675989, also indicating **no remaining ARCH effects** in the standardized residuals.
+
+## 8. Extreme Value Theory (EVT) - Peaks Over Threshold (POT) and GPD Fit
+
+*   **Data Slices**: Log returns for SBIN.NS and INFY.NS.
+*   **Decisions**:
+    *   **Peaks Over Threshold (POT) method** was used with a Generalized Pareto Distribution (GPD).
+    *   Initial exploration involved **Block Maxima and POT methods**, **Mean Residual Life plots**, and **Parameter Stability plots** for threshold selection.
+    *   Specific **upper and lower thresholds** were set for each stock based on these analyses.
+    *   GPD parameters were fitted to exceedances, and **return period summaries** were generated.
+    *   **Goodness-of-Fit tests (Kolmogorov-Smirnov and Anderson-Darling)** were performed to assess the GPD fit.
+    *   A **smooth CDF** was constructed using a t-distribution for the body and GPD tails with a logistic splice for transition.
+*   **Conclusion**:
+    *   **SBIN.NS**: Upper threshold: 6.8 (73 exceedances), Lower threshold: -7.1 (45 exceedances). Fitted GPD upper tail parameters: shape=0.2347, scale=1.2698. Fitted GPD lower tail parameters: shape=0.0930, scale=1.9219. KS test for uniformity of PIT values yielded a p-value of **0.0220**.
+    *   **INFY.NS**: Upper threshold: 5 (210 exceedances), Lower threshold: -7.8 (60 exceedances). Fitted GPD upper tail parameters: shape=-0.0869, scale=2.2910. Fitted GPD lower tail parameters: shape=0.3693, scale=1.6635. KS test for uniformity of PIT values yielded a p-value of **0.0600**.
+
+## 9. Libraries Used
+
+The analysis relies on a comprehensive suite of Python libraries:
+
 *   `yfinance`
 *   `numpy`
-*   `matplotlib`
+*   `scipy`
+*   `matplotlib.pyplot`
 *   `pandas`
 *   `statsmodels`
 *   `pmdarima`
-*   `sklearn`
+*   `sklearn.metrics`
 *   `arch`
-*   `scipy`
 *   `seaborn`
 *   `pyextremes`
+*   `warnings`
 
-You can install these using pip:
-```bash
-pip install yfinance numpy matplotlib pandas statsmodels pmdarima scikit-learn arch scipy seaborn pyextremes
-```
+## 10. Conclusion
 
-## Data Acquisition and Preparation
-Historical daily stock price data for **SBIN.NS** and **INFY.NS** were obtained from Yahoo Finance for the maximum available period.
-
-Daily log returns are calculated using the formula: `Rt = 100 * ln(Pt / Pt-1)` where `Pt` is the closing price at time `t`.
-*   Initial log returns on 1996-01-02:
-    *   **INFY.NS**: -0.405307%
-    *   **SBIN.NS**: -3.234742%
-
-The log return series exhibit clear evidence of **volatility clustering**, where periods of high volatility are followed by similar high-volatility periods, and vice versa.
-
-## ARMA Model Analysis
-The optimal ARIMA specification for each stock's log returns was determined using a systematic approach. The dataset was partitioned with 95% for training. The `pm.auto_arima` function performed an exhaustive search to identify the model minimizing the Akaike Information Criterion (AIC), with parameters `start_p=1, start_q=1, max_p=7, max_q=7, start_P=0, m=3, test='adf', seasonal=False, D=1`.
-
-### SBIN.NS (ARMA)
-The optimal model identified for SBIN.NS was **ARIMA(0,0,1)(0,0,0) with intercept**.
-*   **Model**: SARIMAX(0, 0, 1)
-*   **No. Observations**: 7086
-*   **Log Likelihood**: -16132.767
-*   **AIC**: **32271.535**
-*   **BIC**: **32292.132**
-*   **RMSE**: 1.6094
-*   **Confidence Interval (first 2 rows)**:
-    *   2024-03-15: [-4.611628, 4.631178]
-    *   2024-03-18: [-4.572123, 4.687486]
-
-### INFY.NS (ARMA)
-The optimal model identified for INFY.NS was **ARIMA(2,0,1)(0,0,0) with intercept**.
-*   **Model**: SARIMAX(2, 0, 1)
-*   **No. Observations**: 7086
-*   **Log Likelihood**: -16260.519
-*   **AIC**: **32531.038**
-*   **BIC**: **32565.367**
-*   **RMSE**: 1.5297
-*   **Confidence Interval (first 2 rows)**:
-    *   2024-03-15: [-4.408879, 5.002040]
-    *   2024-03-18: [-4.634076, 4.796797]
-
-## GJR-GARCH-StudentT Model Analysis
-Following ARIMA model fitting, residuals were extracted and used to estimate a GJR-GARCH model with Student’s t-distribution for modeling conditional volatility. The `arch_model` function was configured with parameters: `vol='Garch', p=1, o=1, q=1, dist='studentst', mean='Constant'`.
-
-### SBIN.NS (GJR-GARCH)
-*   **Model**: Constant Mean - GJR-GARCH (1,1,1) with Standardized Student's t-distribution
-*   **Log-Likelihood**: -15383.9
-*   **AIC**: **30779.8577**
-*   **BIC**: **30821.0530**
-*   **Key Volatility Model Parameters**:
-    *   `omega`: 0.1378
-    *   `alpha`: 0.0745
-    *   `gamma`: 0.0358 (indicates leverage effect)
-    *   `beta`: 0.8869
-    *   `nu` (Student's t-distribution degrees of freedom): 5.8373
-
-**Residual Diagnostics for SBIN.NS**:
-*   **Ljung-Box on residuals (Lags 10, 20)**: p-values 0.0012, 0.0019
-*   **Ljung-Box on squared residuals (Lags 10, 20)**: p-values 0.6715, 0.8281
-*   **ARCH LM p-value**: 0.8366
-*   **Visual diagnostics** include plots for standardized residuals, their distribution, Q-Q plot, and ACF of residuals.
-
-### INFY.NS (GJR-GARCH)
-*   **Model**: Constant Mean - GJR-GARCH (1,1,1) with Standardized Student's t-distribution
-*   **Log-Likelihood**: -14747.6
-*   **AIC**: **29507.2999**
-*   **BIC**: **29548.4951**
-*   **Key Volatility Model Parameters**:
-    *   `omega`: 0.2404
-    *   `alpha`: 0.1397
-    *   `gamma`: 0.0313
-    *   `beta`: 0.8145
-    *   `nu` (Student's t-distribution degrees of freedom): 4.1291
-
-**Residual Diagnostics for INFY.NS**:
-*   **Ljung-Box on residuals (Lags 10, 20)**: p-values 0.6592, 0.4269
-*   **Ljung-Box on squared residuals (Lags 10, 20)**: p-values 0.6700, 0.9260
-*   **ARCH LM p-value**: 0.9102
-*   **Visual diagnostics** include plots for standardized residuals, their distribution, Q-Q plot, and ACF of residuals.
-
-## Rolling Forecasting
-Rolling forecasting procedures were implemented for both stocks using the fitted GJR-GARCH models on ARIMA residuals. The models were recursively re-estimated at each step with updated residual histories, generating one-step-ahead volatility forecasts. Actual volatility was approximated using a 40-day rolling standard deviation window.
-
-### SBIN.NS (Rolling Forecast)
-*   **Forecast Accuracy (RMSE)**: 0.5047
-*   Plots comparing actual rolling standard deviation vs. predicted volatility are generated.
-
-### INFY.NS (Rolling Forecast)
-*   **Forecast Accuracy (RMSE)**: 0.4664
-*   Plots comparing actual rolling standard deviation vs. predicted volatility are generated.
-
-## Extreme Value Theory (EVT) Analysis
-The Peak Over Threshold (POT) methodology was employed to fit Generalized Pareto Distributions (GPD) to the tail regions of the log return distributions. Threshold selection involved systematic evaluation across quantile ranges (`q_range`), computing Kolmogorov-Smirnov (KS) p-values and Anderson-Darling (AD) statistics for exceedances, with scoring mechanisms to identify optimal fits.
-
-A smooth cumulative distribution function (CDF) was constructed combining Student’s t-distribution for the central body with GPD tails, connected via logistic splicing. Model validation utilized PIT histograms and KS tests. A global PIT optimization was performed to find the best upper and lower thresholds that yield a KS p-value greater than 0.05 for the overall smoothed CDF.
-
-### SBIN.NS EVT
-*   **Mean Residual Life and Parameter Stability Plots**: Generated for both upper and lower extremes.
-*   **Optimal Upper Tail Threshold**:
-    *   **Quantile**: 0.950
-    *   **Threshold**: 3.7167
-    *   **Exceedances**: 373
-    *   **Shape Parameter**: 0.0756
-    *   **Scale Parameter**: 1.6505
-    *   **KS p-value**: 0.4344
-    *   **AD Statistic**: 1.1088
-    *   **Combined Score**: 0.3235
-*   **Optimal Lower Tail Threshold**:
-    *   **Quantile**: 0.045
-    *   **Threshold**: -3.6935
-    *   **Exceedances**: 336
-    *   **Shape Parameter**: 0.1344
-    *   **Scale Parameter**: 1.4497
-    *   **KS p-value**: 0.9168
-    *   **AD Statistic**: 0.3173
-    *   **Combined Score**: 0.8851
-*   **PIT Validation Results (Smooth CDF)**:
-    *   **KS Statistic**: 0.0133
-    *   **p-value**: 0.1412
-*   **Global PIT Optimization**:
-    *   **Optimal Combination**: (i=9, j=6)
-    *   **KS Statistic**: 0.0133
-    *   **p-value**: 0.1412
-
-### INFY.NS EVT
-*   **Mean Residual Life and Parameter Stability Plots**: Generated for both upper and lower extremes.
-*   **Optimal Upper Tail Threshold**:
-    *   **Quantile**: 0.925
-    *   **Threshold**: 2.9710
-    *   **Exceedances**: 560
-    *   **Shape Parameter**: -0.0180
-    *   **Scale Parameter**: 2.1022
-    *   **KS p-value**: 0.2443
-    *   **AD Statistic**: 1.3934
-    *   **Combined Score**: 0.1050
-*   **Optimal Lower Tail Threshold**:
-    *   **Quantile**: 0.055
-    *   **Threshold**: -3.0617
-    *   **Exceedances**: 411
-    *   **Shape Parameter**: 0.1899
-    *   **Scale Parameter**: 1.8274
-    *   **KS p-value**: 0.6968
-    *   **AD Statistic**: 0.4515
-    *   **Combined Score**: 0.6517
-*   **PIT Validation Results (Smooth CDF)**:
-    *   **KS Statistic**: 0.0116
-    *   **p-value**: 0.2668
-*   **Global PIT Optimization**:
-    *   **Optimal Combination**: (i=1, j=3)
-    *   **KS Statistic**: 0.0116
-    *   **p-value**: 0.2668
-
-## Author
-Srikrishna Das (MA24M025)
-
-## Date
-September 16, 2025
+This project successfully applied various time series and extreme value models to forecast stock prices and volatility for SBIN.NS and INFY.NS. The findings highlight the non-stationary nature of stock prices, the presence of volatility clustering in log returns, and the effectiveness of GARCH-family models and EVT in capturing these financial time series characteristics. The chosen models demonstrated reasonable performance in predicting future values and extreme events, providing valuable insights for risk management and investment strategies.
