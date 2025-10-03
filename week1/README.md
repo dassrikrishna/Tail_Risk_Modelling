@@ -1,202 +1,247 @@
-# Time Series Analysis and Volatility Modeling of SBIN.NS and INFY.NS
+# Extreme Value Analysis of Stock Returns using ARMA-GJR-GARCH Model
 
 ## Overview
-This project constructs and validates marginal distribution models for the financial returns of two major Indian stocks: State Bank of India (SBIN.NS) and Infosys (INFY.NS). The primary goal is to create a robust model that accurately captures the stylized facts of financial returns, such as volatility clustering, leverage effects, and heavy-tailed distributions.
+This report presents an extreme value analysis of stock returns for SBIN (State Bank of India) and INFY (Infosys) using the AR-GJR-GARCH model with Student’s t-distribution. The analysis includes model fitting, diagnostic tests, and threshold selection for extreme value modeling.
 
-The modeling framework integrates three key components:
-1.  **Autoregressive Moving Average (ARMA) model**: Used for modeling the conditional mean.
-2.  **Glosten-Jagannathan-Runkle GARCH (GJR-GARCH) model with Student’s t-distribution**: Applied for modeling conditional volatility.
-3.  **Extreme Value Theory (EVT)**: Utilized for modeling the tail distributions.
+The modeling framework integrates key components:
+1. **AR-GJR-GARCH model with Student’s t-distribution**: Used for modeling the conditional mean and volatility.
+2. **Generalized Pareto Distribution (GPD)**: Applied for modeling the tail distributions.
+3. **Smooth CDF Construction**: Combining GPD tails with Student’s t-body using logistic splice.
+4. **Probability Integral Transform (PIT)**: Utilized for model validation.
 
-The final composite model is validated using the Probability Integral Transform (PIT) and Kolmogorov-Smirnov (KS) tests to ensure an adequate description of the entire return distribution.
+The final composite model is validated using PIT histograms and Kolmogorov-Smirnov (KS) tests to ensure an adequate description of the entire return distribution.
 
 ## Contents
-1.  [Installation](#installation)
-2.  [Data Acquisition and Preparation](#data-acquisition-and-preparation)
-3.  [ARMA Model Analysis](#arma-model-analysis)
-    *   [SBIN.NS](#sbinns-arma)
-    *   [INFY.NS](#infyns-arma)
-4.  [GJR-GARCH-StudentT Model Analysis](#gjr-garch-studentt-model-analysis)
-    *   [SBIN.NS](#sbinns-gjr-garch)
-    *   [INFY.NS](#infyns-gjr-garch)
-5.  [Rolling Forecasting](#rolling-forecasting)
-    *   [SBIN.NS](#sbinns-rolling-forecast)
-    *   [INFY.NS](#infyns-rolling-forecast)
-6.  [Extreme Value Theory (EVT) Analysis](#extreme-value-theory-evt-analysis)
-    *   [SBIN.NS EVT](#sbinns-evt)
-    *   [INFY.NS EVT](#infyns-evt)
-7.  [Author](#author)
-8.  [Date](#date)
+1. [Installation](#installation)
+2. [Data Acquisition and Preparation](#data-acquisition-and-preparation)
+3. [Visualization of Log Returns](#visualization-of-log-returns)
+    * [SBIN.NS](#sbinns-visualization)
+    * [INFY.NS](#infyns-visualization)
+4. [Model Fitting and Diagnostics](#model-fitting-and-diagnostics)
+    * [SBIN.NS](#sbinns-model)
+    * [INFY.NS](#infyns-model)
+5. [Extreme Value Analysis](#extreme-value-analysis)
+    * [SBIN.NS EVT](#sbinns-evt)
+    * [INFY.NS EVT](#infyns-evt)
+6. [Author](#author)
+7. [Date](#date)
 
 ## Installation
 The following Python libraries are necessary to run the analysis:
-*   `yfinance`
-*   `numpy`
-*   `matplotlib`
-*   `pandas`
-*   `statsmodels`
-*   `pmdarima`
-*   `sklearn`
-*   `arch`
-*   `scipy`
-*   `seaborn`
-*   `pyextremes`
+* `yfinance`
+* `numpy`
+* `matplotlib`
+* `pandas`
+* `statsmodels`
+* `arch`
+* `scipy`
+* `seaborn`
+* `pyextremes`
 
 You can install these using pip:
 ```bash
-pip install yfinance numpy matplotlib pandas statsmodels pmdarima scikit-learn arch scipy seaborn pyextremes
+pip install yfinance numpy matplotlib pandas statsmodels arch scipy seaborn pyextremes
 ```
 
 ## Data Acquisition and Preparation
-Historical daily stock price data for **SBIN.NS** and **INFY.NS** were obtained from Yahoo Finance for the maximum available period.
+Financial data for SBIN.NS and INFY.NS were downloaded using the yfinance library for the maximum available period.
 
 Daily log returns are calculated using the formula: `Rt = 100 * ln(Pt / Pt-1)` where `Pt` is the closing price at time `t`.
-*   Initial log returns on 1996-01-02:
-    *   **INFY.NS**: -0.405307%
-    *   **SBIN.NS**: -3.234742%
+* Initial log returns on 1996-01-02:
+    * **INFY.NS**: -0.4052%
+    * **SBIN.NS**: -3.2347%
 
 The log return series exhibit clear evidence of **volatility clustering**, where periods of high volatility are followed by similar high-volatility periods, and vice versa.
 
-## ARMA Model Analysis
-The optimal ARIMA specification for each stock's log returns was determined using a systematic approach. The dataset was partitioned with 95% for training. The `pm.auto_arima` function performed an exhaustive search to identify the model minimizing the Akaike Information Criterion (AIC), with parameters `start_p=1, start_q=1, max_p=7, max_q=7, start_P=0, m=3, test='adf', seasonal=False, D=1`.
+The first three observations of log returns are shown below:
 
-### SBIN.NS (ARMA)
-The optimal model identified for SBIN.NS was **ARIMA(0,0,1)(0,0,0) with intercept**.
-*   **Model**: SARIMAX(0, 0, 1)
-*   **No. Observations**: 7086
-*   **Log Likelihood**: -16132.767
-*   **AIC**: **32271.535**
-*   **BIC**: **32292.132**
-*   **RMSE**: 1.6094
-*   **Confidence Interval (first 2 rows)**:
-    *   2024-03-15: [-4.611628, 4.631178]
-    *   2024-03-18: [-4.572123, 4.687486]
+| Date       | INFY.NS | SBIN.NS |
+|------------|---------|---------|
+| 1996-01-02 | -0.4052 | -3.2347 |
+| 1996-01-03 | 0.6746  | -2.7025 |
+| 1996-01-04 | -0.6624 | -0.3464 |
 
-### INFY.NS (ARMA)
-The optimal model identified for INFY.NS was **ARIMA(2,0,1)(0,0,0) with intercept**.
-*   **Model**: SARIMAX(2, 0, 1)
-*   **No. Observations**: 7086
-*   **Log Likelihood**: -16260.519
-*   **AIC**: **32531.038**
-*   **BIC**: **32565.367**
-*   **RMSE**: 1.5297
-*   **Confidence Interval (first 2 rows)**:
-    *   2024-03-15: [-4.408879, 5.002040]
-    *   2024-03-18: [-4.634076, 4.796797]
+These values represent the percentage change in log prices from one day to the next.
 
-## GJR-GARCH-StudentT Model Analysis
-Following ARIMA model fitting, residuals were extracted and used to estimate a GJR-GARCH model with Student’s t-distribution for modeling conditional volatility. The `arch_model` function was configured with parameters: `vol='Garch', p=1, o=1, q=1, dist='studentst', mean='Constant'`.
+## Visualization of Log Returns
+The data was split into 95% training and 5% testing sets.
 
-### SBIN.NS (GJR-GARCH)
-*   **Model**: Constant Mean - GJR-GARCH (1,1,1) with Standardized Student's t-distribution
-*   **Log-Likelihood**: -15383.9
-*   **AIC**: **30779.8577**
-*   **BIC**: **30821.0530**
-*   **Key Volatility Model Parameters**:
-    *   `omega`: 0.1378
-    *   `alpha`: 0.0745
-    *   `gamma`: 0.0358 (indicates leverage effect)
-    *   `beta`: 0.8869
-    *   `nu` (Student's t-distribution degrees of freedom): 5.8373
+### SBIN.NS (Visualization)
+Figure 1 shows the time series of log returns for State Bank of India (SBIN) over the entire period. The plot reveals periods of high volatility, particularly during market stress periods.
 
-**Residual Diagnostics for SBIN.NS**:
-*   **Ljung-Box on residuals (Lags 10, 20)**: p-values 0.0012, 0.0019
-*   **Ljung-Box on squared residuals (Lags 10, 20)**: p-values 0.6715, 0.8281
-*   **ARCH LM p-value**: 0.8366
-*   **Visual diagnostics** include plots for standardized residuals, their distribution, Q-Q plot, and ACF of residuals.
+### INFY.NS (Visualization)
+Figure 2 displays the log returns for Infosys (INFY). Similar to SBIN, the returns show volatility clustering, a common feature in financial time series.
 
-### INFY.NS (GJR-GARCH)
-*   **Model**: Constant Mean - GJR-GARCH (1,1,1) with Standardized Student's t-distribution
-*   **Log-Likelihood**: -14747.6
-*   **AIC**: **29507.2999**
-*   **BIC**: **29548.4951**
-*   **Key Volatility Model Parameters**:
-    *   `omega`: 0.2404
-    *   `alpha`: 0.1397
-    *   `gamma`: 0.0313
-    *   `beta`: 0.8145
-    *   `nu` (Student's t-distribution degrees of freedom): 4.1291
+## Model Fitting and Diagnostics
+An AR-GJR-GARCH(1,1) model with Student’s t-distribution was fitted to both stocks.
 
-**Residual Diagnostics for INFY.NS**:
-*   **Ljung-Box on residuals (Lags 10, 20)**: p-values 0.6592, 0.4269
-*   **Ljung-Box on squared residuals (Lags 10, 20)**: p-values 0.6700, 0.9260
-*   **ARCH LM p-value**: 0.9102
-*   **Visual diagnostics** include plots for standardized residuals, their distribution, Q-Q plot, and ACF of residuals.
+### SBIN.NS (Model)
+Data Split:
+* Train data shape: 7097 observations
+* Test data shape: 374 observations
 
-## Rolling Forecasting
-Rolling forecasting procedures were implemented for both stocks using the fitted GJR-GARCH models on ARIMA residuals. The models were recursively re-estimated at each step with updated residual histories, generating one-step-ahead volatility forecasts. Actual volatility was approximated using a 40-day rolling standard deviation window.
+Model Selection Criteria:
+* AIC: 30744.0794
+* BIC: 30853.9357
 
-### SBIN.NS (Rolling Forecast)
-*   **Forecast Accuracy (RMSE)**: 0.5047
-*   Plots comparing actual rolling standard deviation vs. predicted volatility are generated.
+Lower AIC and BIC values indicate a better fit of the model. These values will be used to compare different model specifications.
 
-### INFY.NS (Rolling Forecast)
-*   **Forecast Accuracy (RMSE)**: 0.4664
-*   Plots comparing actual rolling standard deviation vs. predicted volatility are generated.
+Diagnostic Tests:
+* Ljung-Box Test on Residuals (lag 20): LB statistic: 22.687, p-value: 0.3044
+* Ljung-Box Test on Squared Residuals (lag 20): LB statistic: 14.449, p-value: 0.8070
+* ARCH LM Test (lag 20): LM statistic: 14.6875, p-value: 0.7940
 
-## Extreme Value Theory (EVT) Analysis
-The Peak Over Threshold (POT) methodology was employed to fit Generalized Pareto Distributions (GPD) to the tail regions of the log return distributions. Threshold selection involved systematic evaluation across quantile ranges (`q_range`), computing Kolmogorov-Smirnov (KS) p-values and Anderson-Darling (AD) statistics for exceedances, with scoring mechanisms to identify optimal fits.
+The high p-value (>0.05) indicates no significant autocorrelation in the residuals, suggesting the mean equation is adequate. The high p-value indicates no remaining ARCH effects, confirming the volatility model is well-specified. This test also confirms no remaining conditional heteroskedasticity in the residuals.
 
-A smooth cumulative distribution function (CDF) was constructed combining Student’s t-distribution for the central body with GPD tails, connected via logistic splicing. Model validation utilized PIT histograms and KS tests. A global PIT optimization was performed to find the best upper and lower thresholds that yield a KS p-value greater than 0.05 for the overall smoothed CDF.
+### INFY.NS (Model)
+Data Split:
+* Train data shape: 7097 observations
+* Test data shape: 374 observations
+
+Model Selection Criteria:
+* AIC: 29512.4196
+* BIC: 29622.2759
+
+INFY has lower AIC and BIC values compared to SBIN, suggesting the model fits slightly better for INFY data.
+
+Diagnostic Tests:
+* Ljung-Box Test on Residuals (lag 20): LB statistic: 26.932, p-value: 0.1372
+* Ljung-Box Test on Squared Residuals (lag 20): LB statistic: 11.662, p-value: 0.9272
+* ARCH LM Test (lag 20): LM statistic: 12.6437, p-value: 0.8921
+
+All diagnostic tests pass (p-values > 0.05), indicating the model is well-specified for INFY as well.
+
+## Extreme Value Analysis
+After fitting the GARCH model, standardized residuals were extracted for extreme value analysis using the Generalized Pareto Distribution (GPD).
 
 ### SBIN.NS EVT
-*   **Mean Residual Life and Parameter Stability Plots**: Generated for both upper and lower extremes.
-*   **Optimal Upper Tail Threshold**:
-    *   **Quantile**: 0.950
-    *   **Threshold**: 3.7167
-    *   **Exceedances**: 373
-    *   **Shape Parameter**: 0.0756
-    *   **Scale Parameter**: 1.6505
-    *   **KS p-value**: 0.4344
-    *   **AD Statistic**: 1.1088
-    *   **Combined Score**: 0.3235
-*   **Optimal Lower Tail Threshold**:
-    *   **Quantile**: 0.045
-    *   **Threshold**: -3.6935
-    *   **Exceedances**: 336
-    *   **Shape Parameter**: 0.1344
-    *   **Scale Parameter**: 1.4497
-    *   **KS p-value**: 0.9168
-    *   **AD Statistic**: 0.3173
-    *   **Combined Score**: 0.8851
-*   **PIT Validation Results (Smooth CDF)**:
-    *   **KS Statistic**: 0.0133
-    *   **p-value**: 0.1412
-*   **Global PIT Optimization**:
-    *   **Optimal Combination**: (i=9, j=6)
-    *   **KS Statistic**: 0.0133
-    *   **p-value**: 0.1412
+Mean Residual Life Plots: Figure 3 shows the mean residual life plots for both upper and lower extremes. These plots help identify appropriate thresholds for the GPD model. A linear pattern above a certain threshold suggests the GPD is appropriate.
+
+Parameter Stability Plots: Figure 4 displays parameter stability plots showing how the GPD shape and scale parameters change with different threshold choices. Stable (flat) regions indicate good threshold candidates.
+
+Threshold Selection:
+
+**Upper Threshold Selection**:
+* Quantile: 0.970
+* Threshold value: 1.9050
+* Number of exceedances: 213
+* Shape parameter: 0.1058
+* Scale parameter: 0.6206
+* KS p-value: 0.5947
+* Anderson-Darling statistic: 0.6661
+
+The high p-value (0.5951) indicates the GPD fits the upper tail well.
+
+**Lower Threshold Selection**:
+* Quantile: 0.025
+* Threshold value: -1.9664
+* Number of exceedances: 178
+* Shape parameter: 0.1533
+* Scale parameter: 0.5307
+* KS p-value: 0.7756
+* Anderson-Darling statistic: 0.4125
+
+The very high p-value (0.7753) confirms an excellent fit of the GPD to the lower tail.
+
+Smooth CDF Construction: A smooth cumulative distribution function (CDF) was constructed by combining GPD for the lower tail (below threshold -1.9664), Student’s t-distribution for the body (between thresholds), GPD for the upper tail (above threshold 1.9050), and logistic splice function for smooth transitions. Figure 7 shows the resulting smooth CDF across the entire range of standardized residuals.
+
+PIT Validation: The Probability Integral Transform was applied to validate the fitted distribution. If the model is correctly specified, the PIT values should be uniformly distributed on [0,1]. Figure 8 shows the histogram of PIT values.
+
+PIT Test Results: KS Statistic = 0.0116, p-value = 0.2974
+
+Global PIT Optimization: Systematic search across threshold combinations to maximize KS p-value for global PIT:
+* Optimal Combination: (i=9, j=9)
+* KS Statistic: 0.0116
+* p-value: 0.2974
+* Upper Threshold: Quantile = 0.970, Threshold = 1.9050, Exceedances = 213
+* Lower Threshold: Quantile = 0.025, Threshold = −1.9664, Exceedances = 178
+
+The optimized p-value (0.2976) is greater than 0.05, indicating that the smooth CDF with optimized thresholds provides a good fit to the data. This validates the combined GPD-t-GPD model for the standardized residuals.
+
+Summary Table for SBIN.NS:
+
+| Metric              | Value     |
+|---------------------|-----------|
+| Model               | AR-GJR-GARCH-StudentsT + Composite (t-body + GPD tails) |
+| LB (ε) p-value      | 0.3044    |
+| LB (ε²) p-value     | 0.8070    |
+| ARCH-LM p-value     | 0.7940    |
+| Upper Threshold     | 1.9050    |
+| Upper Exceedances   | 213       |
+| GPD Upper ξ         | 0.1058    |
+| GPD Upper β         | 0.6207    |
+| Lower Threshold     | -1.9664   |
+| Lower Exceedances   | 178       |
+| GPD Lower ξ         | 0.1533    |
+| GPD Lower β         | 0.5308    |
+| PIT KS p-value      | 0.2976    |
 
 ### INFY.NS EVT
-*   **Mean Residual Life and Parameter Stability Plots**: Generated for both upper and lower extremes.
-*   **Optimal Upper Tail Threshold**:
-    *   **Quantile**: 0.925
-    *   **Threshold**: 2.9710
-    *   **Exceedances**: 560
-    *   **Shape Parameter**: -0.0180
-    *   **Scale Parameter**: 2.1022
-    *   **KS p-value**: 0.2443
-    *   **AD Statistic**: 1.3934
-    *   **Combined Score**: 0.1050
-*   **Optimal Lower Tail Threshold**:
-    *   **Quantile**: 0.055
-    *   **Threshold**: -3.0617
-    *   **Exceedances**: 411
-    *   **Shape Parameter**: 0.1899
-    *   **Scale Parameter**: 1.8274
-    *   **KS p-value**: 0.6968
-    *   **AD Statistic**: 0.4515
-    *   **Combined Score**: 0.6517
-*   **PIT Validation Results (Smooth CDF)**:
-    *   **KS Statistic**: 0.0116
-    *   **p-value**: 0.2668
-*   **Global PIT Optimization**:
-    *   **Optimal Combination**: (i=1, j=3)
-    *   **KS Statistic**: 0.0116
-    *   **p-value**: 0.2668
+Mean Residual Life Plots: Figure 5 presents the mean residual life plots for INFY, used to guide threshold selection for modeling extreme values.
+
+Parameter Stability Plots: Figure 6 shows parameter stability for INFY extremes.
+
+Threshold Selection:
+
+**Upper Threshold Selection**:
+* Quantile: 0.935
+* Threshold value: 1.4235
+* Number of exceedances: 461
+* Shape parameter: 0.1432
+* Scale parameter: 0.5641
+* KS p-value: 0.6600
+* Anderson-Darling statistic: 0.8893
+
+The high p-value indicates good GPD fit for the upper tail of INFY returns.
+
+**Lower Threshold Selection**:
+* Quantile: 0.040
+* Threshold value: -1.5829
+* Number of exceedances: 284
+* Shape parameter: 0.3542
+* Scale parameter: 0.5462
+* KS p-value: 0.9623
+* Anderson-Darling statistic: 0.2552
+
+The very high p-value (0.9623) confirms excellent fit for the lower tail of INFY returns.
+
+Smooth CDF Construction: A smooth cumulative distribution function (CDF) was constructed by combining GPD for the lower tail (below threshold -1.5829), Student’s t-distribution for the body (between thresholds), GPD for the upper tail (above threshold 1.4235), and logistic splice function for smooth transitions. Figure 9 shows the resulting smooth CDF across the entire range of standardized residuals.
+
+PIT Validation: The Probability Integral Transform was applied to validate the fitted distribution. If the model is correctly specified, the PIT values should be uniformly distributed on [0,1]. Figure 10 shows the histogram of PIT values.
+
+PIT Test Results: KS Statistic = 0.0125, p-value = 0.2192
+
+Global PIT Optimization: Systematic search across threshold combinations to maximize KS p-value for global PIT:
+* Optimal Combination: (i=2, j=1)
+* KS Statistic: 0.0125
+* p-value: 0.2197
+* Upper Threshold: Quantile = 0.935, Threshold = 1.4235, Exceedances = 461
+* Lower Threshold: Quantile = 0.040, Threshold = −1.5829, Exceedances = 284
+
+The optimized p-value (0.2197) is greater than 0.05, indicating that the smooth CDF with optimized thresholds provides a good fit to the data. This validates the combined GPD-t-GPD model for the standardized residuals of INFY.
+
+Summary Table for INFY.NS:
+
+| Metric              | Value     |
+|---------------------|-----------|
+| Model               | AR-GJR-GARCH-StudentsT + Composite (t-body + GPD tails) |
+| LB (ε) p-value      | 0.1372    |
+| LB (ε²) p-value     | 0.9272    |
+| ARCH-LM p-value     | 0.8921    |
+| Upper Threshold     | 1.4235    |
+| Upper Exceedances   | 461       |
+| GPD Upper ξ         | 0.1432    |
+| GPD Upper β         | 0.5640    |
+| Lower Threshold     | -1.5829   |
+| Lower Exceedances   | 284       |
+| GPD Lower ξ         | 0.3543    |
+| GPD Lower β         | 0.5462    |
+| PIT KS p-value      | 0.2197    |
 
 ## Author
-Srikrishna Das (MA24M025)
+Srikrishna Das(MA24M025)
+
+Under the guidance of: Neelesh S. Upadhye
 
 ## Date
-September 16, 2025
+October 3, 2025
